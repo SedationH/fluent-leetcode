@@ -7,5 +7,9 @@
       "js": ["src/content.tsx"],
       "matches": ["https://leetcode.cn/problems/*"]
     }
-  ]
+  ],
+  "background": {
+    "service_worker": "src/background.ts"
+  },
+  "permissions": ["storage"]
 }
