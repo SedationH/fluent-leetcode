@@ -1,60 +1,76 @@
 import ReactDOM from "react-dom"
-import TurndownService from "turndown"
-
-const turndownService = new TurndownService({
-  headingStyle: "atx",
-  codeBlockStyle: "fenced",
-}).keep(["sup"])
-
-const $ = document.querySelector.bind(document)
-
-const getQuestionMarkdown = () => {
-  const questionMarkdownArray = []
-  // 表题
-  questionMarkdownArray.push(
-    `<h1><a href="${window.location.href}">${$("[data-cypress=QuestionTitle]")?.textContent}</a></h1>`
-  )
-  // 题目描述
-  questionMarkdownArray.push("<h2>Description</h2>")
-  // 难度
-  questionMarkdownArray.push(`<div>Difficulty: <strong>${$("[data-degree]")?.textContent}</strong></div>`)
-  // 类型
-  const $tags = $("[class^=topic-tags]")
-  if ($tags) {
-    const tagsMarkdownArray = []
-    $tags.childNodes.forEach((node) => {
-      // TODO: 下次看看怎么把这个类型转换的问题解决掉
-      tagsMarkdownArray.push(`<a href="${(node as HTMLLinkElement).href}">${node.textContent}</a>`)
-    })
-    questionMarkdownArray.push(`<div>Related Topics: ${tagsMarkdownArray.join(", ")}</div>`)
-  }
-  // 题目内容
-  const content = $("[class=notranslate]")
-    .innerHTML.replace(/\<pre\>/g, "<pre><code>")
-    .replace(/\<\/pre\>/g, "</code></pre>")
-  questionMarkdownArray.push(content)
-  return questionMarkdownArray.map(turndownService.turndown.bind(turndownService)).join("\n\n")
-}
+import { toast, ToastContainer } from "react-toastify"
+import "react-toastify/dist/ReactToastify.css"
+import classNames from "classnames"
+import { useState } from "react"
+import { getAnswerMarkdown, getQuestionMarkdown } from "./parseDOMHelper"
+import style from "./content.module.less"
 
 const $fluentLeetcodeRoot = document.createElement("div")
 $fluentLeetcodeRoot.id = "fluent-leetcode-root"
 document.body.append($fluentLeetcodeRoot)
 
-const App = () => (
-  <div
-    style={{
-      position: "fixed",
-      top: 0,
-    }}
-  >
-    <button
-      onClick={() => {
-        getQuestionMarkdown()
-      }}
-    >
-      点我a{" "}
-    </button>
-  </div>
-)
+const getAnswerMarkdownWithToast = async () => {
+  try {
+    return await getAnswerMarkdown()
+  } catch (error) {
+    toast.error("答案复制失败, 请授予 Clipboard 相关权限", {
+      autoClose: 1000,
+    })
+    throw new Error(error)
+  }
+}
+
+const App = () => {
+  const [isHide, setIsHide] = useState(false)
+  return (
+    <div>
+      <div className={style["app"]}>
+        <div className={classNames("action-wrapper", isHide && "hide")}>
+          <button
+            onClick={async () => {
+              const questionMarkdown = getQuestionMarkdown()
+              await navigator.clipboard.writeText(questionMarkdown)
+              toast.success("「题目」复制成功", {
+                autoClose: 1000,
+              })
+            }}
+          >
+            复制题目
+          </button>
+          <div className="tip">Tip: 「复制答案」和 「复制题目和答案」需要保证剪贴板中有且仅有题解的代码</div>
+          <button
+            onClick={async () => {
+              const answerMarkdown = await getAnswerMarkdownWithToast()
+              await navigator.clipboard.writeText(answerMarkdown)
+              toast.success("「答案」复制成功", {
+                autoClose: 1000,
+              })
+            }}
+          >
+            复制答案
+          </button>
+          <button
+            onClick={async () => {
+              const questionMarkdown = getQuestionMarkdown()
+              const answerMarkdown = await getAnswerMarkdownWithToast()
+              const markdown = `${questionMarkdown}\n\n${answerMarkdown}`
+              await navigator.clipboard.writeText(markdown)
+              toast.success("「题目和答案」 复制成功", {
+                autoClose: 1000,
+              })
+            }}
+          >
+            复制题目和答案
+          </button>
+        </div>
+        <button className={classNames("hide-btn", isHide && "hide")} onClick={() => setIsHide(!isHide)}>
+          隐藏
+        </button>
+      </div>
+      <ToastContainer />
+    </div>
+  )
+}
 
 ReactDOM.render(<App />, $fluentLeetcodeRoot)
