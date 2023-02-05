@@ -2,7 +2,7 @@ import ReactDOM from "react-dom"
 import { toast, ToastContainer } from "react-toastify"
 import "react-toastify/dist/ReactToastify.css"
 import classNames from "classnames"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { storage } from "@extend-chrome/storage"
 import { getAnswerMarkdown, getQuestionMarkdown } from "./parseDOMHelper"
 import style from "./content.module.less"
@@ -51,6 +51,19 @@ const showTip = async () => {
 
 const App = () => {
   const [isHide, setIsHide] = useState(false)
+
+  const handleSetIsHide = async () => {
+    setIsHide(!isHide)
+    await storage.sync.set({ isHide: !isHide })
+  }
+
+  useEffect(() => {
+    ;(async () => {
+      const { isHide } = await storage.sync.get("isHide")
+      setIsHide(isHide)
+    })()
+  }, [])
+
   return (
     <div>
       <div className={style["app"]}>
@@ -94,7 +107,7 @@ const App = () => {
             复制题目和答案
           </button>
         </div>
-        <button className={classNames("hide-btn", isHide && "hide")} onClick={() => setIsHide(!isHide)}>
+        <button className={classNames("hide-btn", isHide && "hide")} onClick={handleSetIsHide}>
           {isHide ? "显示" : "隐藏"}
         </button>
       </div>
